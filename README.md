@@ -1,6 +1,7 @@
 # LLMation Worker
 
 基于Flask和LangChain的大语言模型处理Worker，用于处理LLMation系统的对话请求。
+TODOlist 在 TODO.md
 
 ## 项目结构
 
