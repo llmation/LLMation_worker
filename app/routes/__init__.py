@@ -1,0 +1,1 @@
+from app.routes.chat_routes import chat_bp
