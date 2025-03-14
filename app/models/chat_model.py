@@ -8,8 +8,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import ChatPromptTemplate
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import InMemoryVectorStore
-from langchain_core.vectorstores import VectorStore
-from langchain_core.documents import Document
+# from langchain_core.vectorstores import VectorStore
+# from langchain_core.documents import Document
 from langchain_core.runnables import RunnablePassthrough
 
 class ChatModel:
@@ -105,15 +105,15 @@ class ChatModel:
             print(f"初始化向量数据库时出错: {str(e)}")
             raise e
 
-    def chat_with_user(self, user_input: str) -> str:
+    def stream_chat_with_user(self, user_input: str):
         """
-        与用户进行对话，支持RAG
+        与用户进行流式对话，支持RAG
 
         Args:
             user_input: 用户输入的问题
 
-        Returns:
-            AI的回复
+        Yields:
+            AI的回复内容块
         """
         try:
             # 从向量数据库检索相关文档
@@ -134,17 +134,32 @@ class ChatModel:
             full_response = ""
             for chunk in response_stream:
                 if chunk.content:
-                    full_response += chunk.content
+                    content = chunk.content
+                    full_response += content
+                    yield content
 
             # 将用户输入和AI回复添加到对话历史
             self.messages.append(HumanMessage(content=user_input))
             self.messages.append(AIMessage(content=full_response))
 
-            return full_response
-
         except Exception as e:
             print(f"聊天过程中出错: {str(e)}")
             raise e
+
+    def chat_with_user(self, user_input: str) -> str:
+        """
+        与用户进行对话，支持RAG
+
+        Args:
+            user_input: 用户输入的问题
+
+        Returns:
+            AI的完整回复
+        """
+        full_response = ""
+        for content in self.stream_chat_with_user(user_input):
+            full_response += content
+        return full_response
 
     def clear_history(self) -> None:
         """清空对话历史"""
@@ -163,21 +178,13 @@ class ChatModel:
             """格式化消息"""
             question = input_dict.get("question", "")
 
-            # 检索相关文档
+            # 复用文档检索逻辑
             relevant_docs = []
             if self.vectorstore:
                 relevant_docs = self.vectorstore.similarity_search(question, k=3)
-
-            # 将Document对象序列化为YAML
-            context_docs = []
-            for doc in relevant_docs:
-                doc_yaml = yaml.dump({
-                    "page_content": doc.page_content,
-                    "metadata": doc.metadata
-                })
-                context_docs.append(doc_yaml)
-
-            context = "\n".join(context_docs) if context_docs else "无可用文档上下文"
+                context = "\n".join([doc.page_content for doc in relevant_docs])
+            else:
+                context = "无可用文档上下文"
 
             # 使用prompt模板创建消息
             return self.prompt.format_messages(

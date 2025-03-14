@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, Response, stream_with_context
 from app.models.chat_model import ChatModel
 from app.utils.validators import validate_chat_input
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+# from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 import json
 from typing import Dict, Any
 
@@ -55,33 +55,14 @@ def chat_stream():
         question = data.get('question', '')
 
         def generate():
-            # 从向量数据库检索相关文档
-            relevant_docs = []
-            if chat_model.vectorstore:
-                relevant_docs = chat_model.vectorstore.similarity_search(question, k=3)
-                context = "\n".join([doc.page_content for doc in relevant_docs])
-            else:
-                context = "无可用文档上下文"
-
-            # 构建带有上下文的消息
-            prompt_value = chat_model.prompt.format(context=context, question=question)
-            messages = chat_model.messages + [HumanMessage(content=prompt_value)]
-
-            # 使用流式输出模式获取回复
-            response_stream = chat_model.chat.stream(messages)
-
-            full_response = ""
-            for chunk in response_stream:
-                if chunk.content:
-                    content = chunk.content
-                    full_response += content
+            try:
+                for content in chat_model.stream_chat_with_user(question):
                     yield f"data: {json.dumps({'content': content})}\n\n"
-
-            # 将用户输入和AI回复添加到对话历史
-            chat_model.messages.append(HumanMessage(content=question))
-            chat_model.messages.append(AIMessage(content=full_response))
-
-            yield f"data: [DONE]\n\n"
+                yield f"data: [DONE]\n\n"
+            except Exception as e:
+                current_app.logger.error(f"流式聊天生成错误: {str(e)}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                yield f"data: [DONE]\n\n"
 
         return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
