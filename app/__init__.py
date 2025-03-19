@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -8,7 +8,7 @@ load_dotenv()
 
 def create_app(test_config=None):
     """创建并配置Flask应用"""
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__, instance_relative_config=True, static_folder='../static')
 
     # 配置应用
     app.config.from_mapping(
@@ -36,5 +36,10 @@ def create_app(test_config=None):
     # 注册蓝图
     from app.routes import chat_bp
     app.register_blueprint(chat_bp)
+
+    # 添加前端界面路由
+    @app.route('/')
+    def index():
+        return send_from_directory(app.static_folder, 'index.html')
 
     return app

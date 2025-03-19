@@ -11,3 +11,5 @@ pydantic==2.10.6
 pyyaml==6.0.2
 gunicorn==21.2.0
 pytest==7.4.3
+dashscope
+pypdf==5.4.0

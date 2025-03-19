@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON到提示词转换测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .response {
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>JSON到提示词转换测试</h1>
+    <div class="container">
+        <div class="panel">
+            <h2>输入JSON</h2>
+            <textarea id="jsonInput">{
+    "enginePrompt": "你是一个专业的AI助手",
+    "active": {
+        "doc1": {
+            "title": "测试文档",
+            "content": "这是一个测试文档的内容"
+        }
+    },
+    "reference": [
+        {
+            "type": "document",
+            "key": "doc1",
+            "value": "参考文档内容"
+        }
+    ],
+    "referenceNodes": [
+        {
+            "id": "node1",
+            "content": "节点内容"
+        }
+    ],
+    "conversation": [
+        {
+            "type": "user",
+            "content": "你好",
+            "name": "用户"
+        }
+    ]
+}</textarea>
+            <div>
+                <button onclick="convertToPrompt()">转换为提示词</button>
+                <button onclick="startStream()">开始流式输出</button>
+            </div>
+            <div id="error" class="error"></div>
+        </div>
+        <div class="panel">
+            <h2>输出结果</h2>
+            <div id="output" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        async function convertToPrompt() {
+            const jsonInput = document.getElementById('jsonInput').value;
+            const output = document.getElementById('output');
+            const error = document.getElementById('error');
+
+            try {
+                const response = await fetch('/api/workflow/json-to-prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: jsonInput
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    output.textContent = data.prompt;
+                    error.textContent = '';
+                } else {
+                    error.textContent = data.error || '请求失败';
+                }
+            } catch (err) {
+                error.textContent = `错误: ${err.message}`;
+            }
+        }
+
+        async function startStream() {
+            const jsonInput = document.getElementById('jsonInput').value;
+            const output = document.getElementById('output');
+            const error = document.getElementById('error');
+
+            output.textContent = '';
+            error.textContent = '';
+
+            try {
+                const response = await fetch('/api/workflow/json-to-prompt/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: jsonInput
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const {value, done} = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') {
+                                break;
+                            }
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.error) {
+                                    error.textContent = parsed.error;
+                                    break;
+                                } else {
+                                    output.textContent += parsed.content;
+                                }
+                            } catch (err) {
+                                error.textContent = `解析错误: ${err.message}`;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                error.textContent = `请求错误: ${err.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
