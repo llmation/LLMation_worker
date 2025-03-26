@@ -9,7 +9,7 @@ langchain-text-splitters==0.3.6
 python-dotenv==1.0.1
 pydantic==2.10.6
 pyyaml==6.0.2
-gunicorn==21.2.0
+gunicorn==23.0.0
 pytest==7.4.3
 dashscope
 pypdf==5.4.0
