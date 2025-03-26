@@ -18,7 +18,7 @@ LLMation_worker/
 ├── venv/                   # 虚拟环境
 ├── app.py                  # 应用入口
 ├── requirements.txt        # 依赖列表
-├── LICENSE                 # MIT许可证
+├── LICENSE                 # 许可证
 └── README.md               # 项目说明
 ```
 
