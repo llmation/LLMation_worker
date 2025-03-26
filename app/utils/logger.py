@@ -7,15 +7,14 @@
 
 import os
 import sys
-import json
 import logging
 import traceback
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from loguru import logger
-from pythonjsonlogger import jsonlogger
+from loguru import logger # type: ignore
+from pythonjsonlogger import jsonlogger # type: ignore
 from flask import Flask, has_request_context, request
 
 from app.utils.logger_schema import LogLevel, LogFormat, LoggerConfig, LoggerInterface
