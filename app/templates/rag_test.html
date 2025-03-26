@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG 流式输出测试</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .panel {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      textarea {
+        width: 100%;
+        height: 400px;
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+      button {
+        background-color: #4caf50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      .response {
+        white-space: pre-wrap;
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 14px;
+      }
+      .error {
+        color: red;
+        margin-top: 10px;
+      }
+      .example-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 10px 0;
+      }
+      .status {
+        color: #666;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>RAG 流式输出测试</h1>
+    <p>
+      使用此页面测试 LLMBackendRequest JSON 输入并查看 RAG 增强的流式输出结果
+    </p>
+
+    <div class="example-buttons">
+      <button onclick="loadExample('basic')">基本示例</button>
+      <button onclick="loadExample('conversation')">对话示例</button>
+      <button onclick="loadExample('documents')">文档示例</button>
+    </div>
+
+    <div class="container">
+      <div class="panel">
+        <h2>输入 JSON</h2>
+        <textarea id="jsonInput">
+{
+    "enginePrompt": "你是一个专业的知识库助手，可以利用文档信息回答用户问题",
+    "conversation": [
+        {
+            "type": "user",
+            "content": "请分析一下当前文档"
+        }
+    ]
+}</textarea
+        >
+        <div>
+          <button onclick="startStream()">开始流式输出</button>
+          <button onclick="clearOutput()">清空输出</button>
+        </div>
+        <div id="status" class="status"></div>
+        <div id="error" class="error"></div>
+      </div>
+      <div class="panel">
+        <h2>输出结果</h2>
+        <div id="output" class="response"></div>
+      </div>
+    </div>
+
+    <script>
+      // 加载示例JSON
+      function loadExample(type) {
+        const jsonInput = document.getElementById("jsonInput");
+        let example = {};
+
+        switch (type) {
+          case "basic":
+            example = {
+              enginePrompt:
+                "你是一个专业的知识库助手，可以利用文档信息回答用户问题",
+              conversation: [
+                {
+                  type: "user",
+                  content: "请分析一下当前文档",
+                },
+              ],
+            };
+            break;
+          case "conversation":
+            example = {
+              enginePrompt:
+                "你是一个专业的客服助手，可以基于知识库回答用户问题",
+              conversation: [
+                {
+                  type: "user",
+                  content: "我需要了解你们的退款政策",
+                },
+                {
+                  type: "assistant",
+                  content:
+                    "我们的退款政策规定，购买后7天内可申请无理由退款。超过7天但在30天内，如商品有质量问题可申请退款。您需要提供订单号和问题描述。还有其他问题吗？",
+                },
+                {
+                  type: "user",
+                  content:
+                    "如果我已经超过了7天，但商品确实有问题，应该怎么办？",
+                },
+              ],
+            };
+            break;
+          case "documents":
+            example = {
+              enginePrompt:
+                "你是一个专业的技术文档助手，可以解析并回答用户关于文档的问题",
+              active: {
+                doc1: {
+                  title: "API文档",
+                  content:
+                    "GET /api/users - 获取所有用户信息\nPOST /api/users - 创建新用户\nGET /api/users/{id} - 获取指定用户信息\nPUT /api/users/{id} - 更新指定用户信息\nDELETE /api/users/{id} - 删除指定用户",
+                },
+              },
+              reference: [
+                {
+                  type: "document",
+                  key: "auth_doc",
+                  value:
+                    "认证需要在Header中添加Authorization: Bearer {token}字段。\n令牌有效期为24小时。过期需要重新登录获取。",
+                },
+              ],
+              conversation: [
+                {
+                  type: "user",
+                  content: "如何调用获取用户信息的API？需要认证吗？",
+                },
+              ],
+            };
+            break;
+        }
+
+        jsonInput.value = JSON.stringify(example, null, 4);
+      }
+
+      // 启动流式输出
+      async function startStream() {
+        const jsonInput = document.getElementById("jsonInput").value;
+        const output = document.getElementById("output");
+        const error = document.getElementById("error");
+        const status = document.getElementById("status");
+
+        // 清空之前的输出和错误
+        output.textContent = "";
+        error.textContent = "";
+        status.textContent = "处理中...";
+
+        try {
+          // 验证JSON
+          JSON.parse(jsonInput);
+
+          const response = await fetch("/api/workflow/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: jsonInput,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+              status.textContent = "完成";
+              break;
+            }
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n\n");
+
+            for (const line of lines) {
+              if (line.trim()) {
+                try {
+                  const parsed = JSON.parse(line);
+                  if (parsed.error) {
+                    error.textContent = parsed.error;
+                    status.textContent = "出错";
+                    break;
+                  } else if (parsed.content) {
+                    output.textContent += parsed.content;
+                  }
+                } catch (err) {
+                  console.log("解析错误:", err, "line:", line);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          error.textContent = `错误: ${err.message}`;
+          status.textContent = "出错";
+        }
+      }
+
+      // 清空输出
+      function clearOutput() {
+        document.getElementById("output").textContent = "";
+        document.getElementById("error").textContent = "";
+        document.getElementById("status").textContent = "";
+      }
+
+      // 页面加载完成后加载基本示例
+      document.addEventListener("DOMContentLoaded", () => {
+        loadExample("basic");
+      });
+    </script>
+  </body>
+</html>
