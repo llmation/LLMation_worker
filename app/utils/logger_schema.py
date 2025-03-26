@@ -24,6 +24,8 @@ class LogFormat(str, Enum):
 
     SIMPLE = "SIMPLE"  # 简单文本格式
     JSON = "JSON"  # JSON结构化格式
+    READABLE = "READABLE"  # 高可读性格式
+    HYBRID = "HYBRID"  # 混合格式：终端使用可读性格式，文件同时保存JSON和可读性格式
 
 
 class LoggerConfig:
