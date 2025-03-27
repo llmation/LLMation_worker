@@ -1,0 +1,25 @@
+[project]
+name = "llmation-worker"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dashscope>=1.22.2",
+    "flask==3.1.0",
+    "flask-cors==5.0.1",
+    "gunicorn>=23.0.0",
+    "langchain==0.3.18",
+    "langchain-community==0.3.17",
+    "langchain-core==0.3.34",
+    "langchain-deepseek==0.1.1",
+    "langchain-openai==0.3.4",
+    "langchain-text-splitters==0.3.6",
+    "loguru==0.7.2",
+    "pydantic==2.10.6",
+    "pypdf==5.4.0",
+    "pytest==7.4.3",
+    "python-dotenv==1.0.1",
+    "python-json-logger==2.0.7",
+    "pyyaml==6.0.2",
+]

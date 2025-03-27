@@ -88,11 +88,20 @@ class ReadableLogFormatter:
         log_line += f"{record['message']}{reset}"
 
         # 添加结构化数据（如果存在）
-        extra_data = {k: v for k, v in record["extra"].items() if k not in ("name",)}
-        if extra_data:
-            import json
+        # 安全处理额外数据，确保不会尝试访问不存在的键
+        extra_data = {}
+        for k, v in record["extra"].items():
+            if k != "name" and v is not None:
+                extra_data[k] = v
 
-            log_line += f"\n{level_color}额外数据: {json.dumps(extra_data, ensure_ascii=False, indent=2)}{reset}"
+        if extra_data:
+            try:
+                import json
+
+                log_line += f"\n{level_color}额外数据: {json.dumps(extra_data, ensure_ascii=False, indent=2)}{reset}"
+            except Exception:
+                # 如果JSON序列化失败，使用简单格式
+                log_line += f"\n{level_color}额外数据: {str(extra_data)}{reset}"
 
         # 添加异常信息（如果存在）
         if record["exception"]:
@@ -129,13 +138,20 @@ class ReadableLogFormatter:
         log_line += f"{record['message']}"
 
         # 添加结构化数据（如果存在）
-        extra_data = {k: v for k, v in record["extra"].items() if k not in ("name",)}
-        if extra_data:
-            import json
+        # 安全处理额外数据，确保不会尝试访问不存在的键
+        extra_data = {}
+        for k, v in record["extra"].items():
+            if k != "name" and v is not None:
+                extra_data[k] = v
 
-            log_line += (
-                f"\n额外数据: {json.dumps(extra_data, ensure_ascii=False, indent=2)}"
-            )
+        if extra_data:
+            try:
+                import json
+
+                log_line += f"\n额外数据: {json.dumps(extra_data, ensure_ascii=False, indent=2)}"
+            except Exception:
+                # 如果JSON序列化失败，使用简单格式
+                log_line += f"\n额外数据: {str(extra_data)}"
 
         # 添加异常信息（如果存在）
         if record["exception"]:
@@ -374,9 +390,14 @@ class FlaskAppLoggerAdapter:
             """记录请求开始"""
             request._start_time = datetime.now()
             try:
+                # 安全获取请求ID，确保它不为空
+                request_id = getattr(request, "id", None)
+                if not request_id:
+                    request_id = "无ID-" + datetime.now().strftime("%Y%m%d%H%M%S")
+
                 self.logger.info(
                     f"开始处理请求: {request.method} {request.path}",
-                    request_id=getattr(request, "id", None),
+                    request_id=request_id,
                     remote_addr=request.remote_addr,
                     method=request.method,
                     path=request.path,
@@ -386,6 +407,11 @@ class FlaskAppLoggerAdapter:
                 )
             except Exception as e:
                 print(f"请求日志记录失败: {str(e)}")
+                # 尝试使用更简单的方式记录
+                try:
+                    print(f"备用日志: 开始处理请求 {request.method} {request.path}")
+                except Exception:
+                    pass
 
         @app.after_request
         def log_request_end(response):
@@ -400,9 +426,15 @@ class FlaskAppLoggerAdapter:
                 elif status_code >= 400:
                     log_method = self.logger.warning
 
+                # 安全获取请求ID，确保它不为空
+                request_id = getattr(request, "id", None)
+                if not request_id:
+                    request_id = "无ID-" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+                # 使用命名参数而不是嵌套的字典，避免格式化问题
                 log_method(
                     f"完成处理请求: {request.method} {request.path} {status_code}",
-                    request_id=getattr(request, "id", None),
+                    request_id=request_id,
                     method=request.method,
                     path=request.path,
                     status_code=status_code,
@@ -410,6 +442,13 @@ class FlaskAppLoggerAdapter:
                 )
             except Exception as e:
                 print(f"响应日志记录失败: {str(e)}")
+                # 尝试使用更简单的方式记录
+                try:
+                    print(
+                        f"备用日志: 完成处理请求 {request.method} {request.path} {response.status_code}"
+                    )
+                except Exception:
+                    pass
 
             return response
 
@@ -419,11 +458,17 @@ class FlaskAppLoggerAdapter:
             """记录未捕获的异常"""
             try:
                 error_traceback = traceback.format_exc()
+
+                # 安全获取请求ID
+                request_id = None
+                if has_request_context():
+                    request_id = getattr(request, "id", None)
+                    if not request_id:
+                        request_id = "无ID-" + datetime.now().strftime("%Y%m%d%H%M%S")
+
                 self.logger.error(
                     f"未捕获异常: {str(error)}",
-                    request_id=getattr(request, "id", None)
-                    if has_request_context()
-                    else None,
+                    request_id=request_id,
                     exception_type=error.__class__.__name__,
                     exception=str(error),
                     traceback=error_traceback,
