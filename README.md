@@ -1,6 +1,7 @@
 # LLMation Worker
 
 基于 Flask 和 LangChain 的大语言模型处理 Worker，用于处理 LLMation 系统的对话请求。
+TODOlist 在 TODO.md
 
 ## 项目结构
 
@@ -18,7 +19,7 @@ LLMation_worker/
 ├── venv/                   # 虚拟环境
 ├── app.py                  # 应用入口
 ├── requirements.txt        # 依赖列表
-├── LICENSE                 # 许可证
+├── LICENSE                 # MIT许可证
 └── README.md               # 项目说明
 ```
 
@@ -140,42 +141,10 @@ python app.py
 
 ## 测试
 
-项目使用 Pytest 进行单元测试和集成测试。测试包括：
-
-### 测试类型
-
-- **单元测试**: 测试各个组件的独立功能
-- **API 测试**: 测试 API 端点
-- **集成测试**: 测试多个组件协同工作
-
-### 运行测试
-
-使用以下命令运行测试：
+运行测试：
 
 ```bash
-# 从项目根目录运行
-python run_tests.py unit    # 运行单元测试
-python run_tests.py api     # 运行API测试
-python run_tests.py integration  # 运行集成测试
-python run_tests.py all     # 运行所有测试
-```
-
-### 测试策略
-
-项目采用以下测试策略：
-
-1. **完全模拟外部依赖**：所有外部 API 调用（OpenAI、DashScope）都被模拟，确保测试不依赖于真实 API 密钥
-2. **接口级模拟**：模拟在公共 API 级别进行，而不是内部实现细节，提高测试稳定性
-3. **全局模拟配置**：在`conftest.py`中提供全局模拟配置，简化测试设置
-4. **隔离测试**：通过模拟确保测试相互隔离，不影响其他测试
-
-### 端到端测试
-
-端到端测试默认被跳过，如果需要运行，设置环境变量`RUN_E2E_TESTS=1`，并确保提供了有效的 API 密钥。
-
-```bash
-# 运行端到端测试(需要真实API密钥)
-RUN_E2E_TESTS=1 python run_tests.py all
+pytest
 ```
 
 ## 许可证
