@@ -18,3 +18,4 @@ Thumbs.db
 .cursor
 .github
 .pytest_cache
+.ruff_cache
