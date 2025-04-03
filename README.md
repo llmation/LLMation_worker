@@ -1,7 +1,6 @@
 # LLMation Worker
 
 基于 Flask 和 LangChain 的大语言模型处理 Worker，用于处理 LLMation 系统的对话请求。
-TODOlist 在 TODO.md
 
 ## 项目结构
 
