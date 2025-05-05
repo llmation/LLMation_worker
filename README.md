@@ -43,10 +43,10 @@ LLMation_worker/
 ### 环境准备
 
 1. 确保已安装 Python 3.11+
-2. 使用 UV 进行环境管理和依赖安装（推荐）：
+2. 使用 UV 进行环境管理和依赖安装：
 
 ```bash
-# 安装 UV 工具
+# 安装 UV 
 pip install uv
 
 # 创建虚拟环境
@@ -59,7 +59,7 @@ uv venv
 source .venv/bin/activate
 
 # 使用 uv 同步依赖
-uv pip sync requirements.txt
+uv sync 
 ```
 
 或者使用传统的 pip 方式：
@@ -72,7 +72,7 @@ python -m venv .venv
 # Linux/Mac
 source .venv/bin/activate
 
-# 安装依赖
+# 安装依赖 (requirements.txt 从 pyproject.toml 中提取)
 pip install -r requirements.txt
 ```
 
@@ -83,7 +83,7 @@ pip install -r requirements.txt
 ```env
 OPENAI_API_KEY=your_openai_api_key
 DASHSCOPE_API_KEY=your_dashscope_api_key
-SECRET_KEY=your_secret_key
+SECRET_KEY=your_secret_key（非必须）
 ```
 
 ### 运行
@@ -161,7 +161,7 @@ python app.py
 
 ## 日志管理
 
-项目集成了高级日志系统，支持多种格式：
+项目集成了日志系统，支持多种格式：
 
 - JSON 格式：用于机器处理
 - 可读性格式：方便开发人员阅读
@@ -178,9 +178,11 @@ python app.py
 - Python-dotenv 1.0.1: 环境变量管理
 - Pydantic 2.10.6: 数据验证
 - PyYAML 6.0.2: YAML 数据处理
-- DashScope: 灵积模型 API
+- DashScope: RAG 灵积模型
 
 ## 测试
+
+**最佳实践**：`tests/README.md`
 
 运行测试：
 
