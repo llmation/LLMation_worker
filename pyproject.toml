@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "dashscope>=1.22.2",
+    "fastapi>=0.115.12",
     "flask==3.1.0",
     "flask-cors==5.0.1",
     "gunicorn>=23.0.0",
@@ -22,4 +23,5 @@ dependencies = [
     "python-dotenv==1.0.1",
     "python-json-logger==2.0.7",
     "pyyaml==6.0.2",
+    "uvicorn>=0.34.2",
 ]
