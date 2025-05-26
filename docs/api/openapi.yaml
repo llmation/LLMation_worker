@@ -1,0 +1,127 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  contact:
+    name: LLMation Team
+    url: https://github.com/llmation/LLMation_worker
+  description: "\n        ## LLMation Worker - 智能对话与RAG服务\n\n        这是一个基于FastAPI和LangChain构建的智能对话后端服务，提供以下核心功能：\n\
+    \n        ### \U0001F680 主要特性\n        - **流式对话**: 支持实时流式响应的智能对话\n        - **RAG增强**:\
+    \ 基于文档检索的增强生成\n        - **多模型支持**: 支持OpenAI和阿里云DashScope模型\n        - **文档处理**:\
+    \ 智能文档解析和向量化存储\n        - **实时日志**: 完整的请求追踪和日志记录\n\n        ### \U0001F4CB API端点\n\
+    \        - `POST /api/workflow/completions` - 流式对话完成\n        - `GET /api/rag-test`\
+    \ - RAG功能测试界面\n        - `GET /docs` - API文档 (当前页面)\n        - `GET /redoc` -\
+    \ 替代文档界面\n\n        ### \U0001F527 技术栈\n        - **框架**: FastAPI + Uvicorn\n\
+    \        - **AI**: LangChain + OpenAI/DashScope\n        - **向量存储**: FAISS\n \
+    \       - **日志**: Loguru\n        - **验证**: Pydantic\n\n        ### \U0001F4D6\
+    \ 使用说明\n        1. 配置API密钥 (OpenAI_API_KEY, DASHSCOPE_API_KEY)\n        2. 启动服务:\
+    \ `python app.py`\n        3. 访问测试页面: `/api/rag-test`\n        4. 调用API进行对话\n\n\
+    \        ---\n        **版本**: 1.0.0 | **协议**: Apache 2.0\n        "
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  title: LLMation Worker API
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /:
+    get:
+      operationId: root__get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Root
+  /api/rag-test:
+    get:
+      description: "返回RAG功能测试的交互式网页界面。\n    \n    ### 功能特性\n    - 可视化JSON输入编辑器\n \
+        \   - 实时流式响应显示\n    - 多种示例模板\n    - 错误信息展示\n    \n    ### 使用方法\n    1. 在左侧编辑JSON请求\n\
+        \    2. 点击\"开始流式输出\"按钮\n    3. 在右侧查看实时响应\n    4. 使用示例按钮快速加载模板\n    \n    ###\
+        \ 示例模板\n    - **基本示例**: 简单对话测试\n    - **对话示例**: 多轮对话测试\n    - **文档示例**: 带文档的RAG测试"
+      operationId: rag_test_page_api_rag_test_get
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Successful Response
+      summary: RAG测试页面
+      tags:
+      - 测试
+      - 界面
+      - RAG
+  /api/workflow/completions:
+    post:
+      description: "处理LLMBackendRequest JSON输入并提供流式聊天响应。\n    \n    ### 功能特性\n   \
+        \ - 支持实时流式响应\n    - RAG文档检索增强\n    - 多轮对话上下文\n    - 智能错误处理\n    \n    ###\
+        \ 请求格式\n    ```json\n    {\n        \"enginePrompt\": \"系统提示词\",\n       \
+        \ \"conversation\": [\n            {\"type\": \"user\", \"content\": \"用户消息\"\
+        },\n            {\"type\": \"assistant\", \"content\": \"助手回复\"}\n       \
+        \ ],\n        \"active\": {\n            \"doc1\": {\"title\": \"文档标题\", \"\
+        content\": \"文档内容\"}\n        },\n        \"reference\": [\n            {\"\
+        type\": \"document\", \"key\": \"ref1\", \"value\": \"参考内容\"}\n        ]\n\
+        \    }\n    ```\n    \n    ### 响应格式\n    流式JSON响应，每行包含：\n    ```json\n   \
+        \ {\"content\": \"生成的文本片段\"}\n    ```\n    \n    错误时返回：\n    ```json\n   \
+        \ {\"error\": \"错误描述\"}\n    ```"
+      operationId: process_json_stream_api_workflow_completions_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: 流式JSON响应，包含生成的文本内容
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: 流式对话完成
+      tags:
+      - 对话
+      - RAG
+      - 流式响应
+servers:
+- description: 开发环境
+  url: http://localhost:12000
+- description: 生产环境
+  url: https://work-1-npxugdcnhgrookmw.prod-runtime.all-hands.dev

@@ -1,198 +1,194 @@
 # LLMation Worker
 
-基于 Flask 和 LangChain 的大语言模型处理 Worker，用于处理 LLMation 系统的对话请求。
-TODOlist 在 TODO.md
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-## 项目结构
+🚀 **LLMation Worker** 是一个基于 FastAPI 和 LangChain 构建的智能对话后端服务，提供流式响应和RAG（检索增强生成）功能。
 
-```text
-LLMation_worker/
-├── app/                    # 应用主目录
-│   ├── models/             # 数据模型
-│   ├── routes/             # API路由
-│   ├── services/           # 服务层
-│   ├── templates/          # HTML模板
-│   ├── utils/              # 工具函数
-│   └── __init__.py         # 应用初始化
-├── docs/                   # 文档目录
-├── instance/               # 实例特定文件(日志等)
-├── scripts/                # 维护脚本
-├── tests/                  # 测试目录
-├── .venv/                  # 虚拟环境
-├── app.py                  # 应用入口
-├── pyproject.toml          # 项目定义和依赖
-├── requirements.txt        # 依赖列表
-├── uv.lock                 # UV锁定文件
-├── pytest.ini              # 测试配置
-├── run_tests.py            # 测试运行脚本
-├── LICENSE                 # Apache 2.0许可证
-└── README.md               # 项目说明
-```
+## ✨ 主要特性
 
-## 功能特性
+- 🔄 **流式对话**: 支持实时流式响应的智能对话
+- 📚 **RAG增强**: 基于文档检索的增强生成
+- 🤖 **多模型支持**: 支持OpenAI和阿里云DashScope模型
+- 📄 **文档处理**: 智能文档解析和向量化存储
+- 📊 **实时日志**: 完整的请求追踪和日志记录
+- 🌐 **现代架构**: FastAPI + 异步支持 + 自动文档生成
 
-- 基于 OPENAI_API 和 DASHSCOPE API 的大语言模型对话
-- 支持 RAG（检索增强生成）文档处理
-- 支持流式响应输出
-- 支持 JSON 输入转换为自然语言+YAML 提示词
-- 文档序列化为 YAML 格式
-- 工作流程处理功能
-- 高级日志记录系统（JSON/结构化/可读性格式）
+## 🚀 快速开始
 
-## 安装与运行
+### 环境要求
 
-### 环境准备
+- Python 3.8+
+- pip 或 poetry
 
-1. 确保已安装 Python 3.11+
-2. 使用 UV 进行环境管理和依赖安装（推荐）：
+### 安装依赖
 
 ```bash
-# 安装 UV 工具
-pip install uv
-
-# 创建虚拟环境
-uv venv
-
-# 激活虚拟环境
-# Windows
-.\.venv\Scripts\activate
-# Linux/Mac
-source .venv/bin/activate
-
-# 使用 uv 同步依赖
-uv pip sync requirements.txt
-```
-
-或者使用传统的 pip 方式：
-
-```bash
-# 创建并激活虚拟环境
-python -m venv .venv
-# Windows
-.\.venv\Scripts\activate
-# Linux/Mac
-source .venv/bin/activate
-
-# 安装依赖
+# 使用 pip
 pip install -r requirements.txt
+
+# 或使用 poetry
+poetry install
 ```
 
-### 配置
+### 配置环境变量
 
-创建`.env`文件，设置必要的环境变量：
+```bash
+# 可选：OpenAI API密钥
+export OPENAI_API_KEY="your-openai-api-key"
 
-```env
-OPENAI_API_KEY=your_openai_api_key
-DASHSCOPE_API_KEY=your_dashscope_api_key
-SECRET_KEY=your_secret_key
+# 可选：阿里云DashScope API密钥
+export DASHSCOPE_API_KEY="your-dashscope-api-key"
 ```
 
-### 运行
+### 启动服务
 
 ```bash
 python app.py
 ```
 
-服务将在`http://localhost:5000`启动。
+服务将在 `http://localhost:12000` 启动。
 
-## API 接口
+## 📋 API 文档
 
-### 1. 工作流程处理接口（流式）
+### 自动生成的文档
 
-- **URL**: `/api/workflow/completions`
-- **方法**: POST
-- **描述**: 处理工作流 JSON 请求并使用流式响应返回大语言模型生成内容
-- **请求体**:
+- **Swagger UI**: http://localhost:12000/docs
+- **ReDoc**: http://localhost:12000/redoc
+- **RAG测试页面**: http://localhost:12000/api/rag-test
 
-  ```json
-  {
-    "enginePrompt": "引擎提示内容...",
-    "active": {
-      "doc1": {
-        "id": "doc1",
-        "name": "示例文档",
-        "description": "这是一个示例",
-        "engine": "model-name",
-        "effects": [],
-        "inputs": {},
-        "nodes": [],
-        "outputs": {}
-      }
-    },
-    "reference": [
-      {
-        "type": "document",
-        "key": "doc-ref-1",
-        "value": "参考文档内容"
-      }
-    ],
-    "referenceNodes": [
-      {
-        "id": "ref1",
-        "name": "参考节点",
-        "description": "参考节点描述",
-        "engine": "model-name",
-        "effects": [],
-        "inputs": {},
-        "nodes": [],
-        "outputs": {}
-      }
-    ],
+### 主要端点
+
+#### POST /api/workflow/completions
+
+流式对话完成端点，支持RAG增强。
+
+**请求示例**:
+```json
+{
+    "enginePrompt": "你是一个友好的AI助手",
     "conversation": [
-      {
-        "type": "user",
-        "content": "用户输入"
-      }
+        {"type": "user", "content": "你好"}
     ]
-  }
-  ```
-
-- **响应**: Server-Sent Events (SSE)
-
-  ```json
-  { "content": "模型生成的内容片段..." }
-  ```
-
-### 2. RAG 测试页面
-
-- **URL**: `/api/rag-test`
-- **方法**: GET
-- **描述**: 返回 RAG 测试用的 HTML 页面
-- **响应**: HTML 页面
-
-## 日志管理
-
-项目集成了高级日志系统，支持多种格式：
-
-- JSON 格式：用于机器处理
-- 可读性格式：方便开发人员阅读
-- 混合模式：终端可读性 + 文件双格式
-
-日志文件位于 `instance/logs/` 目录中。
-
-## 使用的主要依赖
-
-- Flask 3.1.0: Web 应用框架
-- LangChain 0.3.18: 大语言模型应用开发框架
-- Langchain-OpenAI 0.3.4: OpenAI 模型集成
-- Loguru 0.7.2: 高级日志系统
-- Python-dotenv 1.0.1: 环境变量管理
-- Pydantic 2.10.6: 数据验证
-- PyYAML 6.0.2: YAML 数据处理
-- DashScope: 灵积模型 API
-
-## 测试
-
-运行测试：
-
-```bash
-# 使用pytest直接运行测试
-pytest
-
-# 或使用自定义测试脚本
-python run_tests.py
+}
 ```
 
-## 许可证
+**响应**: 流式JSON，每行包含生成的文本片段。
 
-本项目采用 Apache License 2.0 许可证。详情请查看 LICENSE 文件。
+#### GET /api/rag-test
+
+返回RAG功能测试的交互式网页界面。
+
+## 🔧 技术栈
+
+- **Web框架**: [FastAPI](https://fastapi.tiangolo.com/) - 现代、快速的Python Web框架
+- **AI框架**: [LangChain](https://langchain.com/) - LLM应用开发框架
+- **向量存储**: [FAISS](https://github.com/facebookresearch/faiss) - 高效相似性搜索
+- **日志系统**: [Loguru](https://github.com/Delgan/loguru) - 现代Python日志库
+- **数据验证**: [Pydantic](https://pydantic.dev/) - 数据验证和设置管理
+- **ASGI服务器**: [Uvicorn](https://www.uvicorn.org/) - 高性能ASGI服务器
+
+## 📁 项目结构
+
+```
+LLMation_worker/
+├── app/                    # 应用主目录
+│   ├── __init__.py        # FastAPI应用工厂
+│   ├── models/            # 数据模型
+│   ├── routes/            # API路由
+│   ├── utils/             # 工具函数
+│   └── templates/         # 模板文件
+├── docs/                  # 文档目录
+├── tests/                 # 测试文件
+├── scripts/               # 脚本文件
+├── app.py                 # 应用入口
+├── requirements.txt       # 依赖列表
+└── README.md             # 项目说明
+```
+
+## 🧪 测试
+
+```bash
+# 运行所有测试
+python -m pytest
+
+# 运行特定测试
+python -m pytest tests/test_api_routes.py
+
+# 生成覆盖率报告
+python -m pytest --cov=app
+```
+
+## 📚 文档生成
+
+```bash
+# 生成所有文档
+python scripts/generate_docs.py
+
+# 生成的文档位置：
+# - docs/api/openapi.json    # OpenAPI JSON规范
+# - docs/api/openapi.yaml    # OpenAPI YAML规范
+# - docs/api/API.md          # Markdown API文档
+# - docs/api/index.html      # HTML静态文档
+```
+
+## 🔧 配置
+
+### 环境变量
+
+| 变量名 | 描述 | 默认值 | 必需 |
+|--------|------|--------|------|
+| `OPENAI_API_KEY` | OpenAI API密钥 | - | 否 |
+| `DASHSCOPE_API_KEY` | 阿里云DashScope API密钥 | - | 否 |
+| `LOG_LEVEL` | 日志级别 | `INFO` | 否 |
+
+### 日志配置
+
+日志文件位于 `instance/logs/app.log`，支持：
+- 自动轮转（10MB）
+- 保留30天
+- 结构化JSON格式
+- 控制台彩色输出
+
+## 🚀 部署
+
+### Docker 部署
+
+```bash
+# 构建镜像
+docker build -t llmation-worker .
+
+# 运行容器
+docker run -p 12000:12000 -e OPENAI_API_KEY=your-key llmation-worker
+```
+
+### 生产部署
+
+```bash
+# 使用 Gunicorn + Uvicorn
+gunicorn app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:12000
+```
+
+## 🤝 贡献
+
+1. Fork 项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开 Pull Request
+
+## 📄 许可证
+
+本项目采用 Apache 2.0 许可证。详见 [LICENSE](LICENSE) 文件。
+
+## 🔗 相关链接
+
+- [FastAPI 文档](https://fastapi.tiangolo.com/)
+- [LangChain 文档](https://langchain.com/)
+- [OpenAI API](https://openai.com/api/)
+- [阿里云DashScope](https://dashscope.aliyun.com/)
+
+---
+
+**Made with ❤️ by LLMation Team**

@@ -20,7 +20,49 @@ class LLMBackendRequest(BaseModel):
     conversation: list
 
 
-@router.post("/workflow/completions")
+@router.post(
+    "/workflow/completions",
+    summary="流式对话完成",
+    description="""
+    处理LLMBackendRequest JSON输入并提供流式聊天响应。
+    
+    ### 功能特性
+    - 支持实时流式响应
+    - RAG文档检索增强
+    - 多轮对话上下文
+    - 智能错误处理
+    
+    ### 请求格式
+    ```json
+    {
+        "enginePrompt": "系统提示词",
+        "conversation": [
+            {"type": "user", "content": "用户消息"},
+            {"type": "assistant", "content": "助手回复"}
+        ],
+        "active": {
+            "doc1": {"title": "文档标题", "content": "文档内容"}
+        },
+        "reference": [
+            {"type": "document", "key": "ref1", "value": "参考内容"}
+        ]
+    }
+    ```
+    
+    ### 响应格式
+    流式JSON响应，每行包含：
+    ```json
+    {"content": "生成的文本片段"}
+    ```
+    
+    错误时返回：
+    ```json
+    {"error": "错误描述"}
+    ```
+    """,
+    response_description="流式JSON响应，包含生成的文本内容",
+    tags=["对话", "RAG", "流式响应"]
+)
 async def process_json_stream(request: Request, data: Dict[str, Any]):
     """处理LLMBackendRequest JSON输入并使用流式输出提供聊天内容"""
     try:
@@ -94,7 +136,32 @@ async def process_json_stream(request: Request, data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/rag-test", response_class=HTMLResponse)
+@router.get(
+    "/rag-test",
+    summary="RAG测试页面",
+    description="""
+    返回RAG功能测试的交互式网页界面。
+    
+    ### 功能特性
+    - 可视化JSON输入编辑器
+    - 实时流式响应显示
+    - 多种示例模板
+    - 错误信息展示
+    
+    ### 使用方法
+    1. 在左侧编辑JSON请求
+    2. 点击"开始流式输出"按钮
+    3. 在右侧查看实时响应
+    4. 使用示例按钮快速加载模板
+    
+    ### 示例模板
+    - **基本示例**: 简单对话测试
+    - **对话示例**: 多轮对话测试
+    - **文档示例**: 带文档的RAG测试
+    """,
+    response_class=HTMLResponse,
+    tags=["测试", "界面", "RAG"]
+)
 async def rag_test_page(request: Request):
     """返回RAG测试页面"""
     client_host = request.client.host if request.client else "unknown"
