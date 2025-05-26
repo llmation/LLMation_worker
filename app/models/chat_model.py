@@ -37,17 +37,22 @@ class ChatModel:
 
         # 初始化OpenAI聊天模型
         try:
-            self.chat = ChatOpenAI(
-                api_key=self.openai_api_key,
-                model_name="gemini-2.0-flash",
-                temperature=0.7,
-                max_tokens=1000,
-                base_url="https://api.bailili.top/v1",  # 自定义API端点
-            )
-            logger.info("成功初始化聊天模型", model="gemini-2.0-pro-exp")
+            if not self.openai_api_key:
+                logger.warning("OpenAI API密钥未设置，聊天功能将不可用")
+                self.chat = None
+            else:
+                self.chat = ChatOpenAI(
+                    api_key=self.openai_api_key,
+                    model_name="gemini-2.0-flash",
+                    temperature=0.7,
+                    max_tokens=1000,
+                    base_url="https://api.bailili.top/v1",  # 自定义API端点
+                )
+                logger.info("成功初始化聊天模型", model="gemini-2.0-flash")
         except Exception as e:
             logger.error("初始化聊天模型失败", error=str(e))
-            raise e
+            logger.warning("聊天模型初始化失败，将在运行时重试")
+            self.chat = None
 
         # 初始化嵌入模型和向量存储
         try:
@@ -157,6 +162,12 @@ class ChatModel:
             AI的回复内容块
         """
         try:
+            # 检查聊天模型是否可用
+            if self.chat is None:
+                logger.error("聊天模型未初始化，无法处理请求")
+                yield "错误：聊天模型未初始化，请检查API密钥配置"
+                return
+                
             logger.info(
                 "开始处理聊天请求",
                 prompt_length=len(engine_prompt),

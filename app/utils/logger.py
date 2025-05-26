@@ -15,7 +15,7 @@ from typing import Dict, Any, Optional
 
 from loguru import logger  # type: ignore
 from pythonjsonlogger import jsonlogger  # type: ignore
-from flask import Flask, has_request_context, request
+# Removed Flask imports for FastAPI compatibility
 
 from app.utils.logger_schema import LogLevel, LogFormat, LoggerConfig, LoggerInterface
 
@@ -37,12 +37,8 @@ class JSONLogFormatter(jsonlogger.JsonFormatter):
         log_record["level"] = record.levelname
         log_record["module"] = record.module
 
-        # 添加请求相关信息（如果在Flask请求上下文中）
-        if has_request_context():
-            log_record["request_id"] = getattr(request, "id", None)
-            log_record["remote_addr"] = request.remote_addr
-            log_record["method"] = request.method
-            log_record["path"] = request.path
+        # Note: Request context handling removed for FastAPI compatibility
+        # FastAPI request context is handled differently
 
         # 处理额外参数
         for key, value in message_dict.items():
@@ -345,159 +341,32 @@ class AppLogger(LoggerInterface):
         self._logger.bind(**kwargs).log(level.value, message)
 
 
-class FlaskAppLoggerAdapter:
-    """Flask应用日志适配器"""
-
-    def __init__(self, app: Flask, config: Optional[LoggerConfig] = None):
-        """
-        初始化Flask应用的日志适配器
-
-        Args:
-            app: Flask应用实例
-            config: 日志配置对象，如果为None则使用默认配置
-        """
-        # 如果未提供配置，创建默认配置
-        if config is None:
-            log_dir = os.path.join(app.instance_path, "logs")
-            log_file = os.path.join(log_dir, "app.log")
-
-            config = LoggerConfig(
-                name=app.name,
-                level=LogLevel.INFO if not app.debug else LogLevel.DEBUG,
-                format_type=LogFormat.HYBRID,  # 使用HYBRID模式
-                file_path=log_file,
-                rotation="10 MB",
-                retention="30 days",
-            )
-
-        # 初始化应用日志记录器
-        self.logger = AppLogger(config)
-
-        # 替换Flask的默认日志记录器
-        app.logger_name = config.name
-
-        # 添加请求ID中间件
-        @app.before_request
-        def add_request_id():
-            """为每个请求添加唯一标识符"""
-            request.id = (
-                datetime.now().strftime("%Y%m%d%H%M%S") + "-" + str(os.urandom(4).hex())
-            )
-
-        # 记录请求开始和结束
-        @app.before_request
-        def log_request_start():
-            """记录请求开始"""
-            request._start_time = datetime.now()
-            try:
-                # 安全获取请求ID，确保它不为空
-                request_id = getattr(request, "id", None)
-                if not request_id:
-                    request_id = "无ID-" + datetime.now().strftime("%Y%m%d%H%M%S")
-
-                self.logger.info(
-                    f"开始处理请求: {request.method} {request.path}",
-                    request_id=request_id,
-                    remote_addr=request.remote_addr,
-                    method=request.method,
-                    path=request.path,
-                    user_agent=request.user_agent.string
-                    if request.user_agent
-                    else None,
-                )
-            except Exception as e:
-                print(f"请求日志记录失败: {str(e)}")
-                # 尝试使用更简单的方式记录
-                try:
-                    print(f"备用日志: 开始处理请求 {request.method} {request.path}")
-                except Exception:
-                    pass
-
-        @app.after_request
-        def log_request_end(response):
-            """记录请求结束"""
-            try:
-                duration = datetime.now() - request._start_time
-                status_code = response.status_code
-
-                log_method = self.logger.info
-                if status_code >= 500:
-                    log_method = self.logger.error
-                elif status_code >= 400:
-                    log_method = self.logger.warning
-
-                # 安全获取请求ID，确保它不为空
-                request_id = getattr(request, "id", None)
-                if not request_id:
-                    request_id = "无ID-" + datetime.now().strftime("%Y%m%d%H%M%S")
-
-                # 使用命名参数而不是嵌套的字典，避免格式化问题
-                log_method(
-                    f"完成处理请求: {request.method} {request.path} {status_code}",
-                    request_id=request_id,
-                    method=request.method,
-                    path=request.path,
-                    status_code=status_code,
-                    duration_ms=duration.total_seconds() * 1000,
-                )
-            except Exception as e:
-                print(f"响应日志记录失败: {str(e)}")
-                # 尝试使用更简单的方式记录
-                try:
-                    print(
-                        f"备用日志: 完成处理请求 {request.method} {request.path} {response.status_code}"
-                    )
-                except Exception:
-                    pass
-
-            return response
-
-        # 记录未捕获的异常
-        @app.errorhandler(Exception)
-        def log_exception(error):
-            """记录未捕获的异常"""
-            try:
-                error_traceback = traceback.format_exc()
-
-                # 安全获取请求ID
-                request_id = None
-                if has_request_context():
-                    request_id = getattr(request, "id", None)
-                    if not request_id:
-                        request_id = "无ID-" + datetime.now().strftime("%Y%m%d%H%M%S")
-
-                self.logger.error(
-                    f"未捕获异常: {str(error)}",
-                    request_id=request_id,
-                    exception_type=error.__class__.__name__,
-                    exception=str(error),
-                    traceback=error_traceback,
-                )
-            except Exception as log_err:
-                # 如果日志记录本身失败，使用标准库记录
-                print(f"日志记录失败: {str(log_err)}")
-                print(f"原始错误: {str(error)}")
-                print(traceback.format_exc())
-
-            # 不要再调用app.handle_http_exception，直接返回错误响应
-            if hasattr(error, "code"):
-                return app.make_response((str(error), error.code))
-            return None
+# Flask-specific adapter removed for FastAPI compatibility
 
 
-def init_app_logger(app: Flask, config: Optional[LoggerConfig] = None) -> AppLogger:
+def init_app_logger(app, config: Optional[LoggerConfig] = None) -> AppLogger:
     """
     初始化应用日志系统
 
     Args:
-        app: Flask应用实例
+        app: 应用实例（可以为None，用于FastAPI）
         config: 日志配置对象，如果为None则使用默认配置
 
     Returns:
         配置好的日志记录器实例
     """
-    adapter = FlaskAppLoggerAdapter(app, config)
-    return adapter.logger
+    if config is None:
+        # 为FastAPI创建默认配置
+        config = LoggerConfig(
+            name="LLMation_worker",
+            level=LogLevel.DEBUG,
+            format_type=LogFormat.HYBRID,
+            file_path="instance/logs/app.log",
+            rotation="10 MB",
+            retention="30 days",
+        )
+    
+    return AppLogger(config)
 
 
 # 创建一个默认的日志记录器实例，可用于非Flask上下文
@@ -566,39 +435,7 @@ def make_readable_logger(original_logger: AppLogger) -> AppLogger:
     return AppLogger(readable_config)
 
 
-def enhance_flask_app_logging(app: Flask) -> None:
-    """
-    增强Flask应用的日志可读性，而不修改现有日志结构
-
-    Args:
-        app: Flask应用实例
-    """
-    # 检查应用是否已经有日志记录器
-    if hasattr(app, "logger") and app.logger:
-        # 保存原始配置
-        original_name = app.logger_name
-
-        # 创建一个新的高可读性格式的日志配置
-        log_dir = os.path.join(app.instance_path, "logs")
-        log_file = os.path.join(log_dir, "app.log")
-
-        config = LoggerConfig(
-            name=original_name,
-            level=LogLevel.DEBUG if app.debug else LogLevel.INFO,
-            format_type=LogFormat.READABLE,
-            file_path=log_file,
-            rotation="10 MB",
-            retention="30 days",
-        )
-
-        # 初始化应用日志记录器
-        adapter = FlaskAppLoggerAdapter(app, config)
-
-        # 返回配置好的日志记录器实例
-        return adapter.logger
-
-    # 如果应用没有日志记录器，创建一个新的
-    return init_app_logger(app)
+# Flask-specific logging enhancement removed for FastAPI compatibility
 
 
 def make_hybrid_logger(original_logger: AppLogger) -> AppLogger:

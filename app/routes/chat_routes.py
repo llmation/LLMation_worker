@@ -1,54 +1,43 @@
 import json
 import traceback
+from typing import Dict, Any
 
-from flask import (
-    Blueprint,
-    Response,
-    current_app,
-    jsonify,
-    render_template,
-    request,
-    stream_with_context,
-)
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse, HTMLResponse
+from pydantic import BaseModel
 
-from app.models.chat_model import ChatModel
+from app import get_chat_model
 from app.utils.validators import validate_llm_backend_request
 from app.utils import logger
 
-# 创建蓝图
-chat_bp = Blueprint("chat", __name__, url_prefix="/api")
-
-# 创建聊天模型实例
-chat_model = None
+# 创建路由器
+router = APIRouter()
 
 
-@chat_bp.before_app_request
-def initialize_chat_model():
-    """在请求之前初始化聊天模型（如果尚未初始化）"""
-    global chat_model
-    if chat_model is None:
-        logger.info("首次请求，初始化ChatModel实例")
-        chat_model = ChatModel(
-            openai_api_key=current_app.config.get("OPENAI_API_KEY"),
-            dashscope_api_key=current_app.config.get("DASHSCOPE_API_KEY"),
-        )
+class LLMBackendRequest(BaseModel):
+    """LLM后端请求模型"""
+    enginePrompt: str
+    conversation: list
 
 
-@chat_bp.route("/workflow/completions", methods=["POST"])
-def process_json_stream():
+@router.post("/workflow/completions")
+async def process_json_stream(request: Request, data: Dict[str, Any]):
     """处理LLMBackendRequest JSON输入并使用流式输出提供聊天内容"""
     try:
+        client_host = request.client.host if request.client else "unknown"
+        content_type = request.headers.get("content-type", "unknown")
+        content_length = request.headers.get("content-length", "unknown")
+        
         logger.info(
             "接收到聊天请求",
-            remote_addr=request.remote_addr,
-            content_type=request.content_type,
-            content_length=request.content_length,
+            remote_addr=client_host,
+            content_type=content_type,
+            content_length=content_length,
         )
 
-        data = request.json
         if not data:
             logger.warning("请求不包含有效的JSON数据")
-            return jsonify({"error": "无效的JSON输入"}), 400
+            raise HTTPException(status_code=400, detail="无效的JSON输入")
 
         # 验证LLMBackendRequest格式
         if not validate_llm_backend_request(data):
@@ -56,7 +45,10 @@ def process_json_stream():
                 "无效的LLMBackendRequest格式",
                 keys_provided=list(data.keys() if isinstance(data, dict) else []),
             )
-            return jsonify({"error": "无效的LLMBackendRequest格式"}), 400
+            raise HTTPException(status_code=400, detail="无效的LLMBackendRequest格式")
+
+        # 获取聊天模型实例
+        chat_model = get_chat_model()
 
         # 处理JSON输入转换为提示词
         logger.info("开始处理JSON输入")
@@ -68,7 +60,7 @@ def process_json_stream():
             conversation_turns=len(conversations),
         )
 
-        def generate():
+        async def generate():
             try:
                 logger.info("开始生成流式响应")
                 for content in chat_model.stream_chat_with_rag(
@@ -76,7 +68,6 @@ def process_json_stream():
                 ):
                     yield f"{json.dumps({'content': content})}\n\n"
                 logger.info("流式响应生成完成")
-                yield ""
             except Exception as e:
                 error_traceback = traceback.format_exc()
                 logger.error(
@@ -86,11 +77,12 @@ def process_json_stream():
                     traceback=error_traceback,
                 )
                 yield f"{json.dumps({'error': str(e)})}\n\n"
-                yield ""
 
         logger.info("返回流式响应")
-        return Response(stream_with_context(generate()), mimetype="text/event-stream")
+        return StreamingResponse(generate(), media_type="text/event-stream")
 
+    except HTTPException:
+        raise
     except Exception as e:
         error_traceback = traceback.format_exc()
         logger.error(
@@ -99,15 +91,25 @@ def process_json_stream():
             error_type=type(e).__name__,
             traceback=error_traceback,
         )
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@chat_bp.route("/rag-test", methods=["GET"])
-def rag_test_page():
+@router.get("/rag-test", response_class=HTMLResponse)
+async def rag_test_page(request: Request):
     """返回RAG测试页面"""
+    client_host = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
     logger.info(
         "访问RAG测试页面",
-        remote_addr=request.remote_addr,
-        user_agent=request.user_agent.string,
+        remote_addr=client_host,
+        user_agent=user_agent,
     )
-    return render_template("rag_test.html")
+    
+    # 读取HTML模板文件
+    try:
+        with open("app/templates/rag_test.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="RAG测试页面未找到")

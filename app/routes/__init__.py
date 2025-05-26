@@ -1,1 +1,1 @@
-from app.routes.chat_routes import chat_bp
+from app.routes.chat_routes import router

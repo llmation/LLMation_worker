@@ -1,41 +1,54 @@
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, url_for
-from flask_cors import CORS
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.utils.logger import init_app_logger, LoggerConfig, LogLevel, LogFormat
+from app.models.chat_model import ChatModel
 
 # 加载环境变量
 load_dotenv()
 
+# 全局变量存储聊天模型实例
+chat_model_instance = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    global chat_model_instance
+    
+    # 启动时初始化
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    dashscope_api_key = os.environ.get("DASHSCOPE_API_KEY")
+    
+    chat_model_instance = ChatModel(
+        openai_api_key=openai_api_key,
+        dashscope_api_key=dashscope_api_key,
+    )
+    
+    yield
+    
+    # 关闭时清理
+    chat_model_instance = None
+
 
 def create_app(test_config=None):
-    """创建并配置Flask应用"""
-    app = Flask(__name__, instance_relative_config=True, static_folder="../static")
-
-    # 配置应用
-    app.config.from_mapping(
-        SECRET_KEY=os.environ.get("SECRET_KEY", "dev"),
-        OPENAI_API_KEY=os.environ.get("OPENAI_API_KEY"),
-        DASHSCOPE_API_KEY=os.environ.get("DASHSCOPE_API_KEY"),
-    )
-
-    if test_config is None:
-        # 非测试模式下加载实例配置
-        app.config.from_pyfile("config.py", silent=True)
-    else:
-        # 测试模式下加载测试配置
-        app.config.from_mapping(test_config)
-
+    """创建并配置FastAPI应用"""
+    
     # 确保实例文件夹存在
+    instance_path = os.path.join(os.getcwd(), "instance")
     try:
-        os.makedirs(app.instance_path)
+        os.makedirs(instance_path, exist_ok=True)
     except OSError:
         pass
 
     # 确保日志目录存在
-    log_dir = os.path.join(app.instance_path, "logs")
+    log_dir = os.path.join(instance_path, "logs")
     try:
         os.makedirs(log_dir, exist_ok=True)
     except OSError:
@@ -43,26 +56,51 @@ def create_app(test_config=None):
 
     # 配置日志系统
     logger_config = LoggerConfig(
-        name=app.name,
-        level=LogLevel.DEBUG if app.debug else LogLevel.INFO,
+        name="LLMation_worker",
+        level=LogLevel.DEBUG,
         format_type=LogFormat.HYBRID,
         file_path=os.path.join(log_dir, "app.log"),
         rotation="10 MB",
         retention="30 days",
     )
-    app.logger = init_app_logger(app, logger_config)
+    init_app_logger(None, logger_config)
+
+    # 创建FastAPI应用
+    app = FastAPI(
+        title="LLMation Worker API",
+        description="LLM Backend Service with RAG capabilities",
+        version="1.0.0",
+        lifespan=lifespan
+    )
 
     # 配置CORS
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-    # 注册蓝图
-    from app.routes import chat_bp
+    # 注册路由
+    from app.routes.chat_routes import router as chat_router
+    app.include_router(chat_router, prefix="/api")
 
-    app.register_blueprint(chat_bp)
+    # 静态文件服务
+    if os.path.exists("static"):
+        app.mount("/static", StaticFiles(directory="static"), name="static")
 
-    # 添加前端界面路由
-    @app.route("/")
-    def index():
-        return redirect(url_for("chat.rag_test_page"))
+    # 根路径重定向
+    @app.get("/")
+    async def root():
+        return RedirectResponse(url="/api/rag-test")
 
     return app
+
+
+def get_chat_model() -> ChatModel:
+    """获取聊天模型实例"""
+    global chat_model_instance
+    if chat_model_instance is None:
+        raise RuntimeError("Chat model not initialized")
+    return chat_model_instance
