@@ -19,13 +19,16 @@
 
 ### 环境要求
 
-- Python 3.8+
-- pip 或 poetry
+- Python 3.11+
+- 推荐使用 uv 管理依赖
 
 ### 安装依赖
 
 ```bash
-# 使用 pip
+# 推荐使用 uv
+uv sync
+
+# 或使用 pip
 pip install -r requirements.txt
 
 # 或使用 poetry
@@ -35,17 +38,17 @@ poetry install
 ### 配置环境变量
 
 ```bash
-# 可选：OpenAI API密钥
+# OpenAI API密钥
 export OPENAI_API_KEY="your-openai-api-key"
 
-# 可选：阿里云DashScope API密钥
+# 阿里云DashScope API密钥
 export DASHSCOPE_API_KEY="your-dashscope-api-key"
 ```
 
 ### 启动服务
 
 ```bash
-python app.py
+uv run app.py
 ```
 
 服务将在 `http://localhost:12000` 启动。
@@ -84,7 +87,7 @@ python app.py
 
 - **Web框架**: [FastAPI](https://fastapi.tiangolo.com/) - 现代、快速的Python Web框架
 - **AI框架**: [LangChain](https://langchain.com/) - LLM应用开发框架
-- **向量存储**: [FAISS](https://github.com/facebookresearch/faiss) - 高效相似性搜索
+<!-- - **向量存储**: [FAISS](https://github.com/facebookresearch/faiss) - 高效相似性搜索 -->
 - **日志系统**: [Loguru](https://github.com/Delgan/loguru) - 现代Python日志库
 - **数据验证**: [Pydantic](https://pydantic.dev/) - 数据验证和设置管理
 - **ASGI服务器**: [Uvicorn](https://www.uvicorn.org/) - 高性能ASGI服务器
@@ -151,7 +154,7 @@ python scripts/generate_docs.py
 - 结构化JSON格式
 - 控制台彩色输出
 
-## 🚀 部署
+## 🚀 部署 (WARNING: TODO)
 
 ### Docker 部署
 
@@ -191,4 +194,4 @@ gunicorn app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:12000
 
 ---
 
-**Made with ❤️ by LLMation Team**
+**Made with ❤️ by LLMation**
