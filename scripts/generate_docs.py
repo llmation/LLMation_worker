@@ -25,93 +25,95 @@ from app import create_app
 def generate_openapi_spec():
     """生成 OpenAPI 规范文件"""
     print("🔄 生成 OpenAPI 规范...")
-    
+
     app = create_app()
     openapi_schema = app.openapi()
-    
+
     # 创建文档目录
     docs_dir = project_root / "docs" / "api"
     docs_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # 生成 JSON 格式
     json_path = docs_dir / "openapi.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(openapi_schema, f, indent=2, ensure_ascii=False)
     print(f"✅ OpenAPI JSON: {json_path}")
-    
+
     # 生成 YAML 格式
     yaml_path = docs_dir / "openapi.yaml"
     with open(yaml_path, "w", encoding="utf-8") as f:
         yaml.dump(openapi_schema, f, default_flow_style=False, allow_unicode=True)
     print(f"✅ OpenAPI YAML: {yaml_path}")
-    
+
     return openapi_schema
 
 
 def generate_markdown_docs(openapi_schema):
     """生成 Markdown API 文档"""
     print("🔄 生成 Markdown 文档...")
-    
+
     docs_dir = project_root / "docs" / "api"
     md_path = docs_dir / "API.md"
-    
+
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write(f"""# {openapi_schema['info']['title']} API 文档
+        f.write(f"""# {openapi_schema["info"]["title"]} API 文档
 
-{openapi_schema['info']['description']}
+{openapi_schema["info"]["description"]}
 
-**版本**: {openapi_schema['info']['version']}
+**版本**: {openapi_schema["info"]["version"]}
 
 ## 服务器
 
 """)
-        
-        for server in openapi_schema.get('servers', []):
+
+        for server in openapi_schema.get("servers", []):
             f.write(f"- **{server['description']}**: `{server['url']}`\n")
-        
+
         f.write("\n## API 端点\n\n")
-        
+
         # 生成端点文档
-        for path, methods in openapi_schema['paths'].items():
+        for path, methods in openapi_schema["paths"].items():
             f.write(f"### {path}\n\n")
-            
+
             for method, details in methods.items():
                 f.write(f"#### {method.upper()}\n\n")
                 f.write(f"**摘要**: {details.get('summary', 'N/A')}\n\n")
-                
-                if 'description' in details:
+
+                if "description" in details:
                     f.write(f"**描述**:\n{details['description']}\n\n")
-                
-                if 'tags' in details:
+
+                if "tags" in details:
                     f.write(f"**标签**: {', '.join(details['tags'])}\n\n")
-                
+
                 # 请求体
-                if 'requestBody' in details:
+                if "requestBody" in details:
                     f.write("**请求体**:\n")
-                    content = details['requestBody']['content']
+                    content = details["requestBody"]["content"]
                     for content_type, schema in content.items():
                         f.write(f"- Content-Type: `{content_type}`\n")
                     f.write("\n")
-                
+
                 # 响应
-                if 'responses' in details:
+                if "responses" in details:
                     f.write("**响应**:\n")
-                    for status, response in details['responses'].items():
-                        f.write(f"- **{status}**: {response.get('description', 'N/A')}\n")
+                    for status, response in details["responses"].items():
+                        f.write(
+                            f"- **{status}**: {response.get('description', 'N/A')}\n"
+                        )
                     f.write("\n")
-                
+
                 f.write("---\n\n")
-    
+
     print(f"✅ Markdown 文档: {md_path}")
 
 
 def generate_html_docs():
     """生成 HTML 静态文档"""
     print("🔄 生成 HTML 文档...")
-    
+
     docs_dir = project_root / "docs" / "api"
     html_path = docs_dir / "index.html"
-    
+
     html_content = """<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -205,7 +207,7 @@ def generate_html_docs():
     <div class="card" id="overview">
         <h2>📋 概览</h2>
         <p>LLMation Worker 是一个基于 FastAPI 和 LangChain 构建的智能对话后端服务。</p>
-        
+
         <h3>🚀 主要特性</h3>
         <ul>
             <li><strong>流式对话</strong>: 支持实时流式响应的智能对话</li>
@@ -227,12 +229,12 @@ def generate_html_docs():
 
     <div class="card" id="endpoints">
         <h2>📋 API 端点</h2>
-        
+
         <div class="endpoint">
             <h3><span class="method post">POST</span>/api/workflow/completions</h3>
             <p><strong>功能</strong>: 流式对话完成</p>
             <p><strong>描述</strong>: 处理LLMBackendRequest JSON输入并提供流式聊天响应</p>
-            
+
             <h4>请求示例</h4>
             <div class="code">
 {
@@ -242,7 +244,7 @@ def generate_html_docs():
     ]
 }
             </div>
-            
+
             <h4>响应示例</h4>
             <div class="code">
 {"content": "你好！我是你的AI助手，很高兴为你服务。"}
@@ -264,7 +266,7 @@ def generate_html_docs():
 
     <div class="card" id="examples">
         <h2>💡 使用示例</h2>
-        
+
         <h3>基本对话</h3>
         <div class="code">
 curl -X POST "http://localhost:12000/api/workflow/completions" \\
@@ -316,19 +318,19 @@ curl -X POST "http://localhost:12000/api/workflow/completions" \\
     </div>
 </body>
 </html>"""
-    
+
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    
+
     print(f"✅ HTML 文档: {html_path}")
 
 
 def generate_readme_docs():
     """更新 README.md 文档"""
     print("🔄 更新 README.md...")
-    
+
     readme_path = project_root / "README.md"
-    
+
     readme_content = """# LLMation Worker
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
@@ -350,13 +352,16 @@ def generate_readme_docs():
 
 ### 环境要求
 
-- Python 3.8+
-- pip 或 poetry
+- Python 3.11+
+- 推荐使用 uv 管理依赖
 
 ### 安装依赖
 
 ```bash
-# 使用 pip
+# 推荐使用 uv
+uv sync
+
+# 或使用 pip
 pip install -r requirements.txt
 
 # 或使用 poetry
@@ -366,17 +371,17 @@ poetry install
 ### 配置环境变量
 
 ```bash
-# 可选：OpenAI API密钥
+# OpenAI API密钥
 export OPENAI_API_KEY="your-openai-api-key"
 
-# 可选：阿里云DashScope API密钥
+# 阿里云DashScope API密钥
 export DASHSCOPE_API_KEY="your-dashscope-api-key"
 ```
 
 ### 启动服务
 
 ```bash
-python app.py
+uv run app.py
 ```
 
 服务将在 `http://localhost:12000` 启动。
@@ -415,7 +420,7 @@ python app.py
 
 - **Web框架**: [FastAPI](https://fastapi.tiangolo.com/) - 现代、快速的Python Web框架
 - **AI框架**: [LangChain](https://langchain.com/) - LLM应用开发框架
-- **向量存储**: [FAISS](https://github.com/facebookresearch/faiss) - 高效相似性搜索
+<!-- - **向量存储**: [FAISS](https://github.com/facebookresearch/faiss) - 高效相似性搜索 -->
 - **日志系统**: [Loguru](https://github.com/Delgan/loguru) - 现代Python日志库
 - **数据验证**: [Pydantic](https://pydantic.dev/) - 数据验证和设置管理
 - **ASGI服务器**: [Uvicorn](https://www.uvicorn.org/) - 高性能ASGI服务器
@@ -482,7 +487,7 @@ python scripts/generate_docs.py
 - 结构化JSON格式
 - 控制台彩色输出
 
-## 🚀 部署
+## 🚀 部署 (WARNING: TODO)
 
 ### Docker 部署
 
@@ -522,32 +527,32 @@ gunicorn app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:12000
 
 ---
 
-**Made with ❤️ by LLMation Team**
+**Made with ❤️ by LLMation**
 """
-    
+
     with open(readme_path, "w", encoding="utf-8") as f:
         f.write(readme_content)
-    
+
     print(f"✅ README 文档: {readme_path}")
 
 
 def main():
     """主函数"""
     print("🚀 开始生成 LLMation Worker API 文档...\n")
-    
+
     try:
         # 生成 OpenAPI 规范
         openapi_schema = generate_openapi_spec()
-        
+
         # 生成 Markdown 文档
         generate_markdown_docs(openapi_schema)
-        
+
         # 生成 HTML 文档
         generate_html_docs()
-        
+
         # 更新 README
         generate_readme_docs()
-        
+
         print("\n✅ 所有文档生成完成！")
         print("\n📚 生成的文档：")
         print("  - docs/api/openapi.json    # OpenAPI JSON规范")
@@ -555,15 +560,16 @@ def main():
         print("  - docs/api/API.md          # Markdown API文档")
         print("  - docs/api/index.html      # HTML静态文档")
         print("  - README.md                # 项目说明文档")
-        
+
         print("\n🌐 在线文档：")
         print("  - http://localhost:12000/docs      # Swagger UI")
         print("  - http://localhost:12000/redoc     # ReDoc")
         print("  - http://localhost:12000/api/rag-test  # RAG测试页面")
-        
+
     except Exception as e:
         print(f"❌ 文档生成失败: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
