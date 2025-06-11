@@ -167,7 +167,7 @@ class ChatModel:
                 logger.error("聊天模型未初始化，无法处理请求")
                 yield "错误：聊天模型未初始化，请检查API密钥配置"
                 return
-                
+
             logger.info(
                 "开始处理聊天请求",
                 prompt_length=len(engine_prompt),

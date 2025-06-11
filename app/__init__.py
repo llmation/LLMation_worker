@@ -21,25 +21,25 @@ chat_model_instance = None
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     global chat_model_instance
-    
+
     # 启动时初始化
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     dashscope_api_key = os.environ.get("DASHSCOPE_API_KEY")
-    
+
     chat_model_instance = ChatModel(
         openai_api_key=openai_api_key,
         dashscope_api_key=dashscope_api_key,
     )
-    
+
     yield
-    
+
     # 关闭时清理
     chat_model_instance = None
 
 
 def create_app(test_config=None):
     """创建并配置FastAPI应用"""
-    
+
     # 确保实例文件夹存在
     instance_path = os.path.join(os.getcwd(), "instance")
     try:
@@ -73,7 +73,7 @@ def create_app(test_config=None):
 
 **主要特性:**
 - 🔄 流式对话: 支持实时流式响应的智能对话
-- 📚 RAG增强: 基于文档检索的增强生成  
+- 📚 RAG增强: 基于文档检索的增强生成
 - 🤖 多模型支持: 支持OpenAI和阿里云DashScope模型
 - 📄 文档处理: 智能文档解析和向量化存储
 - 📊 实时日志: 完整的请求追踪和日志记录
@@ -91,15 +91,12 @@ def create_app(test_config=None):
             "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
         },
         servers=[
-            {
-                "url": "http://localhost:12000",
-                "description": "开发环境"
-            },
+            {"url": "http://localhost:12000", "description": "开发环境"},
             {
                 "url": "https://work-1-npxugdcnhgrookmw.prod-runtime.all-hands.dev",
-                "description": "生产环境"
-            }
-        ]
+                "description": "生产环境",
+            },
+        ],
     )
 
     # 配置CORS
@@ -113,12 +110,13 @@ def create_app(test_config=None):
 
     # 注册路由
     from app.routes.chat_routes import router as chat_router
+
     app.include_router(chat_router, prefix="/api")
 
     # 静态文件服务
     if os.path.exists("static"):
         app.mount("/static", StaticFiles(directory="static"), name="static")
-    
+
     # 文档静态文件服务
     docs_path = os.path.join(os.getcwd(), "docs")
     if os.path.exists(docs_path):
